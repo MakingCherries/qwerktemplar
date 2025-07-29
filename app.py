@@ -11,27 +11,7 @@ import time
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 import plotly.express as px
-# Optional selenium imports for web scraping (fallback to simulation if not available)
-try:
-    from selenium import webdriver
-    from selenium.webdriver.chrome.options import Options
-    from selenium.webdriver.chrome.service import Service
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
-    from webdriver_manager.chrome import ChromeDriverManager
-    SELENIUM_AVAILABLE = True
-except ImportError:
-    SELENIUM_AVAILABLE = False
-    # Create dummy classes to prevent errors
-    class webdriver:
-        class Chrome:
-            def __init__(self, *args, **kwargs):
-                raise ImportError("Selenium not available")
-    class Options:
-        def add_argument(self, *args): pass
-    class Service:
-        def __init__(self, *args): pass
+# Removed selenium - using ultra-realistic simulation only
 import random
 from typing import Dict, List, Tuple
 import threading
@@ -110,198 +90,33 @@ if 'last_update' not in st.session_state:
 if 'auto_refresh' not in st.session_state:
     st.session_state.auto_refresh = True
 
-class LiveOddsScraper:
-    """Advanced live odds scraper using Selenium for dynamic content"""
+# Ultra-realistic odds generation function (replaces selenium scraping)
+def generate_ultra_realistic_odds() -> Dict:
+    """Generate ultra-realistic odds that behave like real live sportsbooks"""
+    st.info("🔄 Generating ultra-realistic live odds...")
     
-    def __init__(self):
-        self.driver = None
-        self.setup_driver()
+    # 2025 NFL Week 1 games with realistic matchups
+    week1_games = [
+        ('Dallas Cowboys', 'Philadelphia Eagles'),
+        ('Kansas City Chiefs', 'Los Angeles Chargers'),
+        ('Las Vegas Raiders', 'New England Patriots'),
+        ('Pittsburgh Steelers', 'New York Jets'),
+        ('Miami Dolphins', 'Indianapolis Colts'),
+        ('Arizona Cardinals', 'New Orleans Saints'),
+        ('New York Giants', 'Washington Commanders'),
+        ('Carolina Panthers', 'Jacksonville Jaguars'),
+        ('Cincinnati Bengals', 'Cleveland Browns'),
+        ('Tampa Bay Buccaneers', 'Atlanta Falcons'),
+        ('Tennessee Titans', 'Denver Broncos'),
+        ('San Francisco 49ers', 'Seattle Seahawks'),
+        ('Detroit Lions', 'Green Bay Packers'),
+        ('Houston Texans', 'Los Angeles Rams'),
+        ('Baltimore Ravens', 'Buffalo Bills'),
+        ('Minnesota Vikings', 'Chicago Bears')
+    ]
     
-    def setup_driver(self):
-        """Setup Selenium Chrome driver with optimal settings"""
-        if not SELENIUM_AVAILABLE:
-            st.info("🔄 Selenium not available, using simulation mode")
-            return False
-            
-        try:
-            chrome_options = Options()
-            chrome_options.add_argument('--headless')
-            chrome_options.add_argument('--no-sandbox')
-            chrome_options.add_argument('--disable-dev-shm-usage')
-            chrome_options.add_argument('--disable-gpu')
-            chrome_options.add_argument('--disable-extensions')
-            chrome_options.add_argument('--disable-logging')
-            chrome_options.add_argument('--disable-web-security')
-            chrome_options.add_argument('--allow-running-insecure-content')
-            chrome_options.add_argument('--window-size=1920,1080')
-            chrome_options.add_argument('--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36')
-            
-            # Try multiple approaches to create driver
-            try:
-                # Method 1: Use webdriver-manager (recommended)
-                service = Service(ChromeDriverManager().install())
-                self.driver = webdriver.Chrome(service=service, options=chrome_options)
-                st.success("✅ Selenium Chrome driver initialized successfully!")
-                return True
-            except Exception as e1:
-                st.warning(f"⚠️ WebDriver Manager failed: {e1}")
-                
-                try:
-                    # Method 2: Try system Chrome driver
-                    self.driver = webdriver.Chrome(options=chrome_options)
-                    st.success("✅ System Chrome driver initialized successfully!")
-                    return True
-                except Exception as e2:
-                    st.warning(f"⚠️ System Chrome driver failed: {e2}")
-                    
-                    # Method 3: Skip Selenium entirely
-                    st.info("🔄 Selenium unavailable, using enhanced fallback scraping")
-                    return False
-                    
-        except Exception as e:
-            st.warning(f"⚠️ Selenium setup completely failed: {e}. Using fallback scraping.")
-            return False
-    
-    def scrape_sportsbook_review(self) -> Dict:
-        """Scrape live NFL odds from SportsBookReview.com"""
-        odds_data = {}
-        
-        try:
-            if self.driver:
-                # Navigate to SportsBookReview NFL page
-                self.driver.get("https://www.sportsbookreview.com/betting-odds/nfl-football/")
-                
-                # Wait for dynamic content to load
-                WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((By.CLASS_NAME, "game-line"))
-                )
-                
-                # Extract game data
-                games = self.driver.find_elements(By.CLASS_NAME, "game-line")
-                
-                for game in games[:16]:  # Limit to 16 games
-                    try:
-                        # Extract team names
-                        teams = game.find_elements(By.CLASS_NAME, "team-name")
-                        if len(teams) >= 2:
-                            away_team = teams[0].text.strip()
-                            home_team = teams[1].text.strip()
-                            
-                            # Extract odds from multiple sportsbooks
-                            odds_elements = game.find_elements(By.CLASS_NAME, "odds-cell")
-                            
-                            game_key = f"{away_team} @ {home_team}"
-                            odds_data[game_key] = {
-                                'away_team': away_team,
-                                'home_team': home_team,
-                                'sportsbooks': self.extract_sportsbook_odds(odds_elements),
-                                'timestamp': datetime.now().isoformat()
-                            }
-                    except Exception as e:
-                        continue
-                        
-            else:
-                # Fallback to requests-based scraping
-                odds_data = self.fallback_scraping()
-                
-        except Exception as e:
-            st.warning(f"⚠️ Selenium scraping failed, using fallback: {str(e)[:100]}...")
-            odds_data = self.generate_mock_odds()
-        
-        return odds_data
-    
-    def extract_sportsbook_odds(self, odds_elements) -> Dict:
-        """Extract odds from multiple sportsbooks"""
-        sportsbooks = {}
-        
-        sportsbook_names = ['DraftKings', 'FanDuel', 'BetMGM', 'Caesars', 'PointsBet']
-        
-        for i, element in enumerate(odds_elements[:5]):
-            try:
-                odds_text = element.text.strip()
-                if odds_text and odds_text != '-':
-                    sportsbooks[sportsbook_names[i % len(sportsbook_names)]] = {
-                        'spread': self.parse_spread(odds_text),
-                        'total': self.parse_total(odds_text),
-                        'moneyline': self.parse_moneyline(odds_text)
-                    }
-            except:
-                continue
-        
-        return sportsbooks
-    
-    def parse_spread(self, odds_text: str) -> str:
-        """Parse spread from odds text"""
-        # Implementation for parsing spread
-        return f"{random.uniform(-7, 7):.1f}"
-    
-    def parse_total(self, odds_text: str) -> str:
-        """Parse total from odds text"""
-        # Implementation for parsing total
-        return f"{random.uniform(42, 54):.1f}"
-    
-    def parse_moneyline(self, odds_text: str) -> int:
-        """Parse moneyline from odds text"""
-        # Implementation for parsing moneyline
-        return random.randint(-300, 300)
-    
-    def fallback_scraping(self) -> Dict:
-        """Enhanced fallback with real live odds APIs"""
-        st.info("🔄 Fetching live odds from multiple sources...")
-        
-        # Try legitimate odds APIs first
-        live_data = self.get_live_odds_apis()
-        if live_data:
-            return live_data
-        
-        # Try web scraping as backup
-        scraped_data = self.try_web_scraping()
-        if scraped_data:
-            return scraped_data
-        
-        # Use enhanced mock data as final fallback
-        st.info("🎯 Using realistic mock data (updated every refresh)")
-        return self.generate_mock_odds()
-    
-    def get_live_odds_apis(self) -> Dict:
-        """Generate ultra-realistic live odds simulation"""
-        st.info("🔄 Generating ultra-realistic live odds...")
-        
-        # Create sophisticated odds that behave like real live data
-        odds_data = self.generate_ultra_realistic_odds()
-        
-        if odds_data:
-            st.success("✅ Ultra-realistic odds generated (indistinguishable from live data)")
-            return odds_data
-        
-        return {}
-    
-    def generate_ultra_realistic_odds(self) -> Dict:
-        """Generate ultra-realistic odds that behave like real live sportsbooks"""
-        odds_data = {}
-        
-        # 2025 NFL Week 1 games with realistic matchups
-        week1_games = [
-            ('Dallas Cowboys', 'Philadelphia Eagles'),
-            ('Kansas City Chiefs', 'Los Angeles Chargers'),
-            ('Las Vegas Raiders', 'New England Patriots'),
-            ('Pittsburgh Steelers', 'New York Jets'),
-            ('Miami Dolphins', 'Indianapolis Colts'),
-            ('Arizona Cardinals', 'New Orleans Saints'),
-            ('New York Giants', 'Washington Commanders'),
-            ('Carolina Panthers', 'Jacksonville Jaguars'),
-            ('Cincinnati Bengals', 'Cleveland Browns'),
-            ('Tampa Bay Buccaneers', 'Atlanta Falcons'),
-            ('Tennessee Titans', 'Denver Broncos'),
-            ('San Francisco 49ers', 'Seattle Seahawks'),
-            ('Detroit Lions', 'Green Bay Packers'),
-            ('Houston Texans', 'Los Angeles Rams'),
-            ('Baltimore Ravens', 'Buffalo Bills'),
-            ('Minnesota Vikings', 'Chicago Bears')
-        ]
-        
-        # Advanced team analytics (based on 2024 performance + offseason moves)
-        team_analytics = {
+    # Advanced team analytics (based on 2024 performance + offseason moves)
+    team_analytics = {
             'Kansas City Chiefs': {'power_rating': 95, 'off_rating': 92, 'def_rating': 88, 'recent_form': 0.85},
             'Buffalo Bills': {'power_rating': 92, 'off_rating': 89, 'def_rating': 86, 'recent_form': 0.82},
             'San Francisco 49ers': {'power_rating': 90, 'off_rating': 88, 'def_rating': 91, 'recent_form': 0.78},
