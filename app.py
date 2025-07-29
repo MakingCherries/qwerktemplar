@@ -11,13 +11,27 @@ import time
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 import plotly.express as px
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
+# Optional selenium imports for web scraping (fallback to simulation if not available)
+try:
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.chrome.service import Service
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from webdriver_manager.chrome import ChromeDriverManager
+    SELENIUM_AVAILABLE = True
+except ImportError:
+    SELENIUM_AVAILABLE = False
+    # Create dummy classes to prevent errors
+    class webdriver:
+        class Chrome:
+            def __init__(self, *args, **kwargs):
+                raise ImportError("Selenium not available")
+    class Options:
+        def add_argument(self, *args): pass
+    class Service:
+        def __init__(self, *args): pass
 import random
 from typing import Dict, List, Tuple
 import threading
@@ -105,6 +119,10 @@ class LiveOddsScraper:
     
     def setup_driver(self):
         """Setup Selenium Chrome driver with optimal settings"""
+        if not SELENIUM_AVAILABLE:
+            st.info("🔄 Selenium not available, using simulation mode")
+            return False
+            
         try:
             chrome_options = Options()
             chrome_options.add_argument('--headless')
