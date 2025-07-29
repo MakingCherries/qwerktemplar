@@ -199,11 +199,11 @@ def generate_ultra_realistic_odds() -> Dict:
                 'sharp_money': random.choice(['Home', 'Away', 'Balanced'])
             }
         
-        return odds_data
-    
-    def generate_sportsbook_variations(self, base_spread: float, base_total: float, away_analytics: Dict, home_analytics: Dict) -> Dict:
-        """Generate realistic sportsbook-specific odds variations"""
-        sportsbooks = {}
+    return odds_data
+
+def generate_sportsbook_variations(base_spread: float, base_total: float, away_analytics: Dict, home_analytics: Dict) -> Dict:
+    """Generate realistic sportsbook-specific odds variations"""
+    sportsbooks = {}
         
         # Real sportsbook characteristics with half-point adjustments only
         book_profiles = {
@@ -925,11 +925,10 @@ def auto_refresh_data():
     """Automatically refresh odds and predictions"""
     if st.session_state.auto_refresh:
         # This would be called periodically to refresh data
-        scraper = LiveOddsScraper()
         predictor = AIPredictor()
         
-        # Scrape new odds
-        new_odds = scraper.scrape_sportsbook_review()
+        # Generate new odds
+        new_odds = generate_ultra_realistic_odds()
         st.session_state.live_odds = new_odds
         
         # Generate new predictions
