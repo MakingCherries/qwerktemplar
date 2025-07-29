@@ -11,6 +11,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application
 COPY . .
 
+# Make start script executable
+RUN chmod +x start.sh
+
 # Create .streamlit directory and config
 RUN mkdir -p ~/.streamlit/
 RUN echo "\
@@ -31,4 +34,4 @@ EXPOSE 8501
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
 
 # Run the application
-CMD streamlit run app.py --server.port=$PORT --server.address=0.0.0.0
+CMD ["./start.sh"]
